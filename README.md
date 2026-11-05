@@ -1,54 +1,29 @@
 # Orbit
 
-Orbit is a single-page browser-style app with tabs, address/search, bookmarks,
-history, theme settings, and an optional external relay configuration. It is
-served by a small Node.js server that requires sign-in before delivering the
-app.
+Orbit is a static, browser-style web app with tabs, address/search, bookmarks,
+history, and theme settings. It has no built-in sign-in or account system.
 
-## Requirements
+## Run locally
 
-- Node.js 18 or newer
-- No npm packages or install step
+Open `index.html` in a modern browser, or serve this directory with any static
+file server. There are no packages or build step.
 
-## Start
+## Publish as a static website
 
-From the repository directory, set the login credentials and start the server:
+Upload `index.html` to an S3 bucket configured for static website hosting, or
+serve it through CloudFront. The site does not require `server.mjs`; that
+authentication server has been removed. Keep the bucket and CDN configuration
+appropriate for the intended public/private access.
 
-```sh
-PROXY_USER=admin PROXY_PASS='choose-a-strong-password' node server.mjs
-```
+## Proxy configuration limitations
 
-Open [http://localhost:3000](http://localhost:3000) and sign in with those
-credentials. Use a different port by setting `PORT`:
+Orbit cannot set a visitor's browser-level HTTP or SOCKS proxy. The proxy form
+only sends requests to a separately operated, compatible relay endpoint that
+the visitor configures. A static S3 site does not provide that relay, and this
+repository does not include one. Without a trusted relay endpoint, navigation
+connects directly from the visitor's browser.
 
-```sh
-PROXY_USER=admin PROXY_PASS='choose-a-strong-password' PORT=8080 node server.mjs
-```
-
-Stop the server with `Ctrl+C`. Both `PROXY_USER` and `PROXY_PASS` are required;
-there is no default account or registration flow.
-
-## Authentication and security
-
-The server serves the app only after successful sign-in. It guards `/api/*`
-routes, uses an eight-hour in-memory session with an `HttpOnly`,
-`SameSite=Strict` cookie, and rate-limits repeated failed logins. Restarting the
-server clears active sessions. In production, use HTTPS and a secret manager,
-and set `COOKIE_SECURE=true` so cookies are marked `Secure`.
-
-Run the app through `server.mjs`; opening `index.html` directly bypasses the
-login gate. The sign-in gate protects this app, not any separate relay service.
-
-## External relay
-
-No proxy/relay backend is included in this repository. The browser can be
-configured to contact a separately operated relay, but its requests do not pass
-through this app's authenticated `/api/*` routes, and this app's session cookie
-does not authenticate to that relay. Do not treat the browser's proxy settings
-as access control. Any relay must independently authenticate callers and enforce
-strict destination allowlists, block private and metadata addresses, and
-revalidate redirects and subresource requests. Never expose an unrestricted
-relay.
-
-See [AUTHENTICATION.md](./AUTHENTICATION.md) for implementation details and
-deployment notes.
+If you provide a relay, it must independently authenticate and authorize
+requests and enforce strict destination restrictions. Do not expose an
+unrestricted relay. Static hosting makes the app itself publicly available
+unless access is restricted separately; do not put secrets in the page.

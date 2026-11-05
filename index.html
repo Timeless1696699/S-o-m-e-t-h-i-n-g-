@@ -143,12 +143,6 @@
     }
     .proxy-settings-button:hover { color: var(--text); background: var(--panel-3); }
     .proxy-settings-button svg { width: 14px; height: 14px; }
-    .logout-button {
-      height: 30px; padding: 0 10px; border: 1px solid var(--border);
-      border-radius: 9px; background: var(--panel); color: var(--muted);
-      font-size: 10px; cursor: pointer; white-space: nowrap;
-    }
-    .logout-button:hover { color: var(--text); background: var(--panel-3); }
     .tab-strip { display: flex; align-items: end; gap: 5px; padding: 5px 10px 0; border-bottom: 1px solid var(--border); overflow-x: auto; overflow-y: hidden; }
     .tab-strip::-webkit-scrollbar { height: 0; }
     .tab {
@@ -403,7 +397,6 @@
       .tab { height: 30px; }
       .proxy-settings-button { width: 30px; justify-content: center; padding: 0; }
       .proxy-settings-button svg { width: 15px; }
-      .logout-button { height: 26px; padding: 0 7px; font-size: 9px; }
       .welcome { padding: 18px; }
       .welcome p { font-size: 11px; }
       .shortcuts { gap: 6px; margin-top: 20px; }
@@ -447,7 +440,6 @@
       <div class="proxy-pill" id="proxyPill" title="No proxy relay configured">
         <span class="proxy-dot"></span><span class="proxy-label">Direct</span>
       </div>
-      <button class="logout-button" id="logoutButton" type="button">Sign out</button>
     </header>
 
     <section class="workspace" id="workspace">
@@ -1159,23 +1151,6 @@
     });
     $("#homeButton").addEventListener("click", goHome);
     $("#homeNav").addEventListener("click", goHome);
-    $("#logoutButton").addEventListener("click", async () => {
-      const button = $("#logoutButton");
-      button.disabled = true;
-      try {
-        const response = await fetch("/api/auth/logout", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Accept": "application/json" }
-        });
-        if (!response.ok) throw new Error(`Sign out failed (HTTP ${response.status}).`);
-        location.replace("/");
-      } catch (error) {
-        button.disabled = false;
-        console.error(error);
-        window.alert(error.message);
-      }
-    });
     $("#focusSearch").addEventListener("click", () => address.focus());
     $("#bookmarkButton").addEventListener("click", addBookmark);
     $("#addBookmarkSide").addEventListener("click", addBookmark);
