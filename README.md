@@ -1,34 +1,53 @@
-# Orbit
+# Ubuntu 16 Desktop VM
 
-Orbit is a static, browser-style web app with tabs, address/search, bookmarks,
-history, and theme settings. It has no built-in sign-in or account system.
-On launch, its cover screen explains the project's purpose, features, and
-external-relay limitations before offering a clear way to enter the app.
+A browser-based live desktop emulator for the **Ubuntu 16.04.5 32-bit desktop**
+image. Upload the static site files to one S3 bucket and open the site; the
+page automatically boots Ubuntu without an ISO picker or installation step.
 
-## Run locally
+## Deploy to S3
 
-Open `index.html` in a modern browser, or serve this directory with any static
-file server. There are no packages or build step; the page explicitly loads its
-local `base64.js` helper from `index.html`. Saved values use Base64 encoding
-for storage compatibility, not for encryption or secrecy. The helper also
-provides the app's storage keys and JSON storage operations.
+1. Create an S3 bucket for static website hosting and set `index.html` as the
+   index document.
+2. Upload this page as `index.html`.
+3. Download the [Ubuntu 16.04.5 32-bit desktop ISO](https://old-releases.ubuntu.com/releases/xenial/ubuntu-16.04.5-desktop-i386.iso)
+   from the official Ubuntu archive and upload that file to the bucket root
+   with the exact object key `ubuntu.iso`. It is about 1.55 GiB.
+4. Open the bucket's website endpoint. The page starts v86 and reads ISO byte
+   ranges from `./ubuntu.iso` in the same bucket.
 
-## Publish as a static website
+For example, with the AWS CLI and a configured profile:
 
-Upload `index.html` to an S3 bucket configured for static website hosting, or
-serve it through CloudFront. The site does not require `server.mjs`; that
-authentication server has been removed. Keep the bucket and CDN configuration
-appropriate for the intended public/private access.
+```bash
+aws s3 cp index.html s3://YOUR_BUCKET/index.html --content-type text/html
+aws s3 cp ubuntu-16.04.5-desktop-i386.iso s3://YOUR_BUCKET/ubuntu.iso \
+  --content-type application/x-iso9660-image
+```
 
-## Proxy configuration limitations
+The browser only requests the ISO sectors needed while Ubuntu boots and runs;
+it does not download the full image into memory first. S3 supports byte-range
+GET requests. Because the page and ISO use the same origin, browser CORS
+configuration is not needed for the ISO.
 
-Orbit cannot set a visitor's browser-level HTTP or SOCKS proxy. The proxy form
-only sends requests to a separately operated, compatible relay endpoint that
-the visitor configures. A static S3 site does not provide that relay, and this
-repository does not include one. Without a trusted relay endpoint, navigation
-connects directly from the visitor's browser.
+### Bucket access
 
-If you provide a relay, it must independently authenticate and authorize
-requests and enforce strict destination restrictions. Do not expose an
-unrestricted relay. Static hosting makes the app itself publicly available
-unless access is restricted separately; do not put secrets in the page.
+An S3 static website endpoint is public and HTTP-only. If using it directly,
+allow public `s3:GetObject` only for `index.html` and `ubuntu.iso`; do not put
+secrets or unrelated files in that bucket. For HTTPS or a private bucket, put
+CloudFront in front of the S3 REST origin with Origin Access Control, and make
+sure both files are served from the same CloudFront hostname. Avoid enabling
+public website access when using the private CloudFront setup.
+
+## Runtime
+
+The page also loads the v86 emulator and BIOS assets from `copy.sh`, so browser
+clients need access to that CDN. Guest RAM defaults to 1 GB and can be changed
+to 768 MB or 1.5 GB. The Ubuntu live session has no persistent virtual hard
+disk; changes are lost when the VM is reset or the page is closed.
+
+## Important: end-of-life software
+
+Ubuntu 16.04 is end-of-life and no longer receives standard security updates.
+Use this legacy image for offline experimentation only. Do not use it for
+sensitive data, sign into accounts, or expose it to untrusted networks.
+Emulation speed depends on the device and browser; a desktop session may be
+slow or fail on memory-constrained devices.
