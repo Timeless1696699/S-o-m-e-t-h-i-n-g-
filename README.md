@@ -40,9 +40,16 @@ public website access when using the private CloudFront setup.
 ## Runtime
 
 The page also loads the v86 emulator and BIOS assets from `copy.sh`, so browser
-clients need access to that CDN. Guest RAM defaults to 1 GB and can be changed
-to 768 MB or 1.5 GB. The Ubuntu live session has no persistent virtual hard
-disk; changes are lost when the VM is reset or the page is closed.
+clients need access to that CDN. Machine Settings lets users select 256 MB,
+512 MB, 1 GB, or 2 GB of RAM; hardware changes take effect after restarting the
+VM. A saved VM state can be stored in IndexedDB and restored with the same VM
+settings. Browser preferences use local storage.
+
+This v86 build emulates one CPU core; multiple-core options are unavailable.
+Networking is off by default and requires a WebSocket relay URL configured in
+`V86_NETWORK_RELAY_URL` in `index.html`. The Ubuntu live session has no
+persistent virtual hard disk; changes are lost when the VM is reset or the page
+is closed unless a VM state is explicitly saved.
 
 ## Important: end-of-life software
 
