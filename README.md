@@ -2,11 +2,16 @@
 
 Orbit is a static, browser-style web app with tabs, address/search, bookmarks,
 history, and theme settings. It has no built-in sign-in or account system.
+On launch, its cover screen explains the project's purpose, features, and
+external-relay limitations before offering a clear way to enter the app.
 
 ## Run locally
 
 Open `index.html` in a modern browser, or serve this directory with any static
-file server. There are no packages or build step.
+file server. There are no packages or build step; the page explicitly loads its
+local `base64.js` helper from `index.html`. Saved values use Base64 encoding
+for storage compatibility, not for encryption or secrecy. The helper also
+provides the app's storage keys and JSON storage operations.
 
 ## Publish as a static website
 
