@@ -1,0 +1,1371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Orbit — A quieter way to browse</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111214;
+      --panel: #191a1e;
+      --panel-2: #202126;
+      --panel-3: #282a30;
+      --border: rgba(255,255,255,.075);
+      --text: #f2f1f0;
+      --muted: #898b96;
+      --subtle: #5f626d;
+      --accent: #c4a8ff;
+      --accent-strong: #a986fa;
+      --accent-wash: rgba(178,148,255,.12);
+      --green: #72d6a0;
+      --red: #ff817d;
+      --yellow: #f6c86c;
+      --shadow: 0 24px 80px rgba(0,0,0,.32);
+      --radius: 14px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f2f1f4;
+      --panel: #fbfafc;
+      --panel-2: #f3f1f6;
+      --panel-3: #eae7ef;
+      --border: rgba(38,33,48,.09);
+      --text: #23212a;
+      --muted: #73717c;
+      --subtle: #96939e;
+      --accent: #7550c8;
+      --accent-strong: #6740bb;
+      --accent-wash: rgba(117,80,200,.1);
+      --green: #218b5a;
+      --red: #cf514c;
+      --yellow: #ae7a14;
+      --shadow: 0 24px 80px rgba(46,34,72,.13);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      transition: background .2s, color .2s;
+    }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .app {
+      height: 100vh;
+      min-height: 480px;
+      display: grid;
+      grid-template-rows: 52px 1fr;
+      padding: 10px 12px 12px;
+      gap: 8px;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      padding: 0 5px;
+    }
+    .traffic-lights { display: flex; gap: 7px; padding: 0 6px; flex: 0 0 auto; }
+    .traffic-lights span {
+      width: 11px; height: 11px; border-radius: 50%;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
+    }
+    .traffic-lights span:nth-child(1) { background: #ff6159; }
+    .traffic-lights span:nth-child(2) { background: #ffbd2e; }
+    .traffic-lights span:nth-child(3) { background: #28c840; }
+    .brand {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 720; letter-spacing: -.04em;
+      padding-right: 10px; white-space: nowrap;
+    }
+    .brand-mark {
+      display: grid; place-items: center; width: 24px; height: 24px;
+      border-radius: 8px; color: #20192d;
+      background: linear-gradient(140deg, #ddcaff, #9d7bea);
+    }
+    .brand-mark svg { width: 15px; }
+    .nav-tools { display: flex; gap: 3px; flex: 0 0 auto; }
+    .icon-button {
+      width: 34px; height: 34px; display: inline-grid; place-items: center;
+      padding: 0; border: 0; border-radius: 10px;
+      background: transparent; color: var(--muted); cursor: pointer;
+      transition: color .16s, background .16s, transform .16s;
+    }
+    .icon-button:hover { color: var(--text); background: var(--panel-3); }
+    .icon-button:active { transform: scale(.94); }
+    .icon-button:disabled { opacity: .35; cursor: default; }
+    .icon-button svg { width: 17px; height: 17px; }
+    .address-wrap {
+      min-width: 100px; max-width: 760px; flex: 1;
+      margin: 0 auto; display: flex; align-items: center;
+      height: 36px; border: 1px solid var(--border);
+      border-radius: 11px; background: var(--panel);
+      transition: border-color .16s, background .16s;
+    }
+    .address-wrap:focus-within { border-color: color-mix(in srgb, var(--accent) 56%, transparent); background: var(--panel-2); }
+    .address-lock { width: 15px; height: 15px; margin: 0 10px 0 12px; color: var(--subtle); flex: 0 0 auto; }
+    #address {
+      width: 100%; min-width: 0; border: 0; outline: 0;
+      background: transparent; color: var(--text); font-size: 12px;
+    }
+    #address::placeholder { color: var(--subtle); }
+    .address-actions { display: flex; gap: 2px; padding: 0 4px; flex: 0 0 auto; }
+    .address-actions .icon-button { width: 27px; height: 27px; }
+    .go-button {
+      height: 27px; padding: 0 10px; border: 0; border-radius: 7px;
+      background: var(--accent-wash); color: var(--accent);
+      font-size: 11px; font-weight: 700; cursor: pointer;
+    }
+    .go-button:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+    .proxy-pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      height: 29px; padding: 0 10px; border: 1px solid var(--border);
+      border-radius: 999px; background: var(--panel); color: var(--muted);
+      font-size: 10px; white-space: nowrap;
+    }
+    .proxy-settings-button {
+      display: inline-flex; align-items: center; gap: 6px; height: 30px;
+      padding: 0 9px; border: 1px solid var(--border); border-radius: 9px;
+      background: var(--panel); color: var(--muted); font-size: 10px;
+      cursor: pointer; white-space: nowrap;
+    }
+    .proxy-settings-button:hover { color: var(--text); background: var(--panel-3); }
+    .proxy-settings-button svg { width: 14px; height: 14px; }
+    .logout-button {
+      height: 30px; padding: 0 10px; border: 1px solid var(--border);
+      border-radius: 9px; background: var(--panel); color: var(--muted);
+      font-size: 10px; cursor: pointer; white-space: nowrap;
+    }
+    .logout-button:hover { color: var(--text); background: var(--panel-3); }
+    .tab-strip { display: flex; align-items: end; gap: 5px; padding: 5px 10px 0; border-bottom: 1px solid var(--border); overflow-x: auto; overflow-y: hidden; }
+    .tab-strip::-webkit-scrollbar { height: 0; }
+    .tab {
+      display: flex; align-items: center; gap: 7px; width: min(220px, 42vw);
+      min-width: 105px; height: 32px; padding: 0 8px 0 10px;
+      border: 1px solid transparent; border-bottom: 0;
+      border-radius: 9px 9px 0 0; background: transparent; color: var(--muted);
+      font-size: 10px; cursor: pointer;
+    }
+    .tab.active { color: var(--text); border-color: var(--border); background: var(--panel); }
+    .tab-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; text-align: left; }
+    .tab-close, .tab-menu-button { border: 0; padding: 0; background: transparent; color: var(--subtle); cursor: pointer; }
+    .tab-close { font-size: 15px; line-height: 1; }
+    .tab-menu-button { width: 18px; height: 20px; font-size: 14px; opacity: 0; }
+    .tab:hover .tab-menu-button, .tab.active .tab-menu-button { opacity: .8; }
+    .tab-favicon { width: 12px; height: 12px; flex: 0 0 auto; border-radius: 4px; display: grid; place-items: center; background: var(--accent-wash); color: var(--accent); font-size: 8px; }
+    .new-tab { flex: 0 0 auto; width: 28px; height: 27px; margin-bottom: 2px; }
+    .tab-context-menu {
+      position: fixed; z-index: 20; display: grid; min-width: 185px; padding: 5px;
+      border: 1px solid var(--border); border-radius: 10px; background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .tab-context-menu[hidden] { display: none; }
+    .tab-context-menu button {
+      padding: 8px 9px; border: 0; border-radius: 6px; background: transparent;
+      color: var(--text); text-align: left; font-size: 10px; cursor: pointer;
+    }
+    .tab-context-menu button:hover { background: var(--panel-3); }
+    .tab-context-menu .menu-proxy { color: var(--muted); }
+    .proxy-dialog {
+      width: min(480px, calc(100vw - 28px)); max-height: min(90vh, 760px);
+      padding: 0; border: 1px solid var(--border); border-radius: 16px;
+      background: var(--panel); color: var(--text); box-shadow: var(--shadow);
+    }
+    .proxy-dialog::backdrop { background: rgba(5,5,8,.67); backdrop-filter: blur(4px); }
+    .proxy-dialog form { padding: 18px; }
+    .dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 15px; }
+    .dialog-heading h2 { margin: 0; font-size: 17px; letter-spacing: -.03em; }
+    .dialog-heading p { margin: 5px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .dialog-close { width: 28px; height: 28px; border: 0; border-radius: 7px; background: var(--panel-3); color: var(--muted); cursor: pointer; }
+    .proxy-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .proxy-field { display: grid; gap: 5px; min-width: 0; }
+    .proxy-field.full { grid-column: 1 / -1; }
+    .proxy-field label { color: var(--muted); font-size: 9px; font-weight: 650; }
+    .proxy-field input, .proxy-field select, .proxy-field textarea {
+      width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--panel-2); color: var(--text); font-size: 11px;
+    }
+    .proxy-field textarea { min-height: 57px; resize: vertical; }
+    .proxy-enable-row { display: flex; align-items: center; gap: 8px; margin: 12px 0; color: var(--text); font-size: 10px; }
+    .proxy-enable-row input { accent-color: var(--accent-strong); }
+    .proxy-status {
+      min-height: 33px; display: flex; align-items: center; gap: 8px; margin: 10px 0;
+      padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--panel-2); color: var(--muted); font-size: 10px;
+    }
+    .proxy-status[data-state="ok"] { color: var(--green); }
+    .proxy-status[data-state="error"] { color: var(--red); }
+    .proxy-status[data-state="busy"] { color: var(--yellow); }
+    .proxy-status-dot { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
+    .proxy-security-note { margin: 9px 0 0; color: var(--subtle); font-size: 9px; line-height: 1.55; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 15px; }
+    .proxy-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px color-mix(in srgb, var(--green) 55%, transparent); }
+    .workspace {
+      display: grid; grid-template-columns: 220px minmax(0,1fr);
+      min-height: 0; overflow: hidden; border: 1px solid var(--border);
+      border-radius: 16px; background: var(--panel); box-shadow: var(--shadow);
+    }
+    .workspace.sidebar-collapsed { grid-template-columns: 0 minmax(0,1fr); }
+    .sidebar {
+      min-width: 0; overflow: auto; padding: 15px 11px 12px;
+      border-right: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 90%, var(--bg));
+      transition: opacity .16s;
+    }
+    .sidebar-collapsed .sidebar { opacity: 0; overflow: hidden; padding-left: 0; padding-right: 0; border: 0; }
+    .side-heading {
+      display: flex; align-items: center; justify-content: space-between;
+      margin: 17px 7px 7px; color: var(--subtle);
+      font-size: 9px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase;
+    }
+    .side-heading:first-child { margin-top: 2px; }
+    .side-heading .icon-button { width: 22px; height: 22px; }
+    .side-heading .icon-button svg { width: 13px; }
+    .side-list { display: grid; gap: 2px; }
+    .side-item {
+      width: 100%; min-width: 0; display: flex; align-items: center; gap: 9px;
+      padding: 8px 9px; border: 0; border-radius: 8px;
+      background: transparent; color: var(--muted); text-align: left;
+      cursor: pointer; font-size: 11px;
+    }
+    .side-item:hover { color: var(--text); background: var(--panel-3); }
+    .side-item.active { color: var(--text); background: var(--accent-wash); }
+    .side-item svg { width: 14px; height: 14px; flex: 0 0 auto; opacity: .8; }
+    .side-item .item-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .side-item .item-time { font-size: 9px; color: var(--subtle); flex: 0 0 auto; }
+    .side-item .remove-bookmark { width: 20px; height: 20px; opacity: 0; flex: 0 0 auto; }
+    .side-item:hover .remove-bookmark { opacity: .8; }
+    .empty-note { margin: 5px 8px; color: var(--subtle); font-size: 10px; line-height: 1.5; }
+    .side-select-wrap { position: relative; margin: 4px 2px; }
+    .side-select-wrap svg { position: absolute; pointer-events: none; right: 10px; top: 10px; width: 12px; color: var(--muted); }
+    #searchEngine {
+      width: 100%; height: 32px; padding: 0 30px 0 10px;
+      appearance: none; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--panel-2); color: var(--text); font-size: 10px;
+    }
+    .sidebar-bottom { margin-top: 22px; padding: 10px 8px 2px; border-top: 1px solid var(--border); }
+    .theme-toggle {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 7px 0; border: 0; background: transparent; color: var(--muted);
+      font-size: 10px; cursor: pointer; text-align: left;
+    }
+    .theme-toggle svg { width: 14px; }
+    .browser {
+      display: grid; grid-template-rows: 38px minmax(0,1fr) 153px;
+      min-width: 0; min-height: 0; background: var(--bg);
+    }
+    .frame-layer { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+    .frame-layer[hidden] { display: none; }
+    .viewport {
+      position: relative; min-width: 0; min-height: 0; overflow: hidden;
+      background:
+        radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 44%),
+        var(--bg);
+    }
+    #tabFrames { position: absolute; inset: 0; }
+    .welcome {
+      position: absolute; inset: 0; display: grid; align-content: center;
+      justify-items: center; padding: 28px; text-align: center;
+    }
+    .welcome.hidden { display: none; }
+    .welcome-orbit {
+      width: 68px; height: 68px; display: grid; place-items: center;
+      margin-bottom: 20px; border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+      border-radius: 23px; color: var(--accent);
+      background: linear-gradient(145deg, var(--accent-wash), transparent);
+      box-shadow: 0 10px 40px color-mix(in srgb, var(--accent) 10%, transparent);
+    }
+    .welcome-orbit svg { width: 34px; height: 34px; }
+    .welcome h1 { margin: 0; font-size: clamp(24px, 3vw, 36px); letter-spacing: -.055em; font-weight: 650; }
+    .welcome p { max-width: 420px; margin: 10px 0 24px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .search-card {
+      width: min(450px, 100%); height: 47px; display: flex; align-items: center;
+      gap: 11px; padding: 0 14px; border: 1px solid var(--border);
+      border-radius: 13px; background: var(--panel); box-shadow: 0 8px 28px rgba(0,0,0,.1);
+      cursor: text; text-align: left;
+    }
+    .search-card svg { width: 17px; color: var(--subtle); flex: 0 0 auto; }
+    .search-card span { color: var(--subtle); font-size: 11px; flex: 1; }
+    .key-hint { padding: 3px 6px; border: 1px solid var(--border); border-radius: 5px; color: var(--subtle); font-size: 9px; }
+    .shortcuts { display: flex; flex-wrap: wrap; justify-content: center; gap: 17px; margin-top: 28px; }
+    #newTabBookmarks:empty { display: none; }
+    .shortcut {
+      display: grid; justify-items: center; gap: 7px; width: 62px;
+      border: 0; background: transparent; color: var(--muted);
+      font-size: 9px; cursor: pointer;
+    }
+    .shortcut:hover { color: var(--text); }
+    .shortcut-icon {
+      width: 35px; height: 35px; display: grid; place-items: center;
+      border: 1px solid var(--border); border-radius: 12px;
+      background: var(--panel); color: var(--accent); font-weight: 700; font-size: 13px;
+    }
+    .shortcut-icon svg { width: 16px; }
+    .error-card {
+      position: absolute; inset: 0; z-index: 2; display: grid;
+      align-content: center; justify-items: center; padding: 28px;
+      background: var(--bg); text-align: center;
+    }
+    .error-card[hidden] { display: none; }
+    .error-icon {
+      width: 43px; height: 43px; display: grid; place-items: center;
+      border-radius: 14px; background: color-mix(in srgb, var(--yellow) 12%, transparent); color: var(--yellow);
+    }
+    .error-icon svg { width: 20px; }
+    .error-card h2 { margin: 15px 0 6px; font-size: 17px; font-weight: 650; letter-spacing: -.03em; }
+    .error-card p { max-width: 430px; color: var(--muted); font-size: 11px; line-height: 1.65; }
+    .error-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; }
+    .action-button {
+      padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--panel); color: var(--text); font-size: 10px; cursor: pointer;
+    }
+    .action-button.primary { border-color: transparent; background: var(--accent); color: #211a2d; font-weight: 700; }
+    .action-button:disabled { opacity: .5; cursor: not-allowed; }
+    .progress {
+      position: absolute; z-index: 4; left: 0; right: 0; top: 0;
+      height: 2px; overflow: hidden; background: transparent; display: none;
+    }
+    .progress.active { display: block; }
+    .progress::after {
+      content: ""; display: block; width: 35%; height: 100%;
+      background: var(--accent); box-shadow: 0 0 12px var(--accent);
+      animation: progress 1.1s ease-in-out infinite;
+    }
+    @keyframes progress { from { transform: translateX(-110%); } to { transform: translateX(310%); } }
+    .inspector {
+      min-height: 0; display: grid; grid-template-rows: 35px 1fr;
+      border-top: 1px solid var(--border); background: var(--panel);
+    }
+    .inspector-head { display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--border); }
+    .inspector-title { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 650; }
+    .inspector-title svg { width: 14px; color: var(--accent); }
+    .inspector-tag { padding: 3px 6px; border-radius: 5px; background: var(--panel-3); color: var(--muted); font-size: 8px; font-weight: 600; letter-spacing: .04em; }
+    .inspector-tools { display: flex; align-items: center; gap: 10px; color: var(--subtle); font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .inspector-body { display: grid; grid-template-columns: 1.05fr 1fr; min-height: 0; }
+    .request-info { padding: 9px 13px; border-right: 1px solid var(--border); overflow: hidden; }
+    .request-line { display: flex; gap: 8px; align-items: center; min-width: 0; margin-bottom: 8px; font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .method { color: var(--green); font-weight: 700; }
+    #requestUrl { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+    .response-line { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 9px; }
+    .status-code { color: var(--green); font: 700 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .header-list { display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: 7px 12px; padding: 10px 14px; overflow: auto; }
+    .header-item { min-width: 0; display: flex; gap: 6px; font: 8px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .header-key { flex: 0 0 auto; color: var(--accent); }
+    .header-value { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+    @media (max-width: 900px) {
+      .workspace { grid-template-columns: 190px minmax(0,1fr); }
+      .brand { display: none; }
+      .proxy-pill .proxy-label, .proxy-settings-button span { display: none; }
+      .proxy-pill { padding: 0 9px; }
+      .header-list { grid-template-columns: 1fr; gap: 5px; }
+    }
+    @media (max-width: 650px) {
+      body { overflow: auto; }
+      .app { height: 100dvh; min-height: 440px; padding: 6px; gap: 5px; grid-template-rows: 48px 1fr; }
+      .toolbar { gap: 4px; padding: 0; }
+      .traffic-lights { display: none; }
+      .nav-tools { gap: 0; }
+      .nav-tools .icon-button { width: 30px; }
+      .nav-tools .icon-button:nth-child(4) { display: none; }
+      .address-wrap { height: 34px; }
+      .address-lock { margin-left: 8px; margin-right: 6px; }
+      #address { font-size: 10px; }
+      .address-actions { padding-right: 3px; }
+      .address-actions .icon-button { display: none; }
+      .go-button { padding: 0 7px; font-size: 10px; }
+      .proxy-pill { height: 26px; padding: 0 7px; }
+      .workspace { grid-template-columns: minmax(0,1fr); border-radius: 12px; }
+      .workspace.sidebar-collapsed { grid-template-columns: minmax(0,1fr); }
+      .sidebar { position: absolute; z-index: 10; top: 59px; bottom: 12px; left: 6px; width: min(260px, 78vw); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+      .sidebar-collapsed .sidebar { display: none; }
+      .browser { grid-row: 1; grid-column: 1; grid-template-rows: 36px minmax(0,1fr) 118px; }
+      .inspector-body { grid-template-columns: 1fr; }
+      .request-info { border: 0; padding: 7px 10px; }
+      .header-list { display: none; }
+      .inspector { grid-template-rows: 32px 1fr; }
+      .inspector-head { padding: 0 10px; }
+      .inspector-tools { font-size: 8px; }
+      .tab-strip { padding-left: 7px; }
+      .tab { height: 30px; }
+      .proxy-settings-button { width: 30px; justify-content: center; padding: 0; }
+      .proxy-settings-button svg { width: 15px; }
+      .logout-button { height: 26px; padding: 0 7px; font-size: 9px; }
+      .welcome { padding: 18px; }
+      .welcome p { font-size: 11px; }
+      .shortcuts { gap: 6px; margin-top: 20px; }
+      .shortcut { width: 55px; }
+    }
+    @media (max-height: 600px) {
+      .browser { grid-template-rows: 34px minmax(0,1fr) 112px; }
+      .welcome-orbit { width: 52px; height: 52px; margin-bottom: 12px; }
+      .welcome p { margin: 7px 0 16px; }
+      .shortcuts { margin-top: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="toolbar" aria-label="Browser toolbar">
+      <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
+      <button class="icon-button" id="sidebarToggle" aria-label="Toggle sidebar" title="Toggle sidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9 5v14"/></svg>
+      </button>
+      <div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.2"/><path d="M4.6 12h14.8M12 3.8c2.4 2.4 3.5 5.1 3.5 8.2s-1.1 5.8-3.5 8.2c-2.4-2.4-3.5-5.1-3.5-8.2s1.1-5.8 3.5-8.2Z"/></svg></span>orbit</div>
+      <nav class="nav-tools" aria-label="Navigation">
+        <button class="icon-button" id="backButton" aria-label="Go back" title="Back" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14.5 5-7 7 7 7"/></svg></button>
+        <button class="icon-button" id="forwardButton" aria-label="Go forward" title="Forward" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m9.5 5 7 7-7 7"/></svg></button>
+        <button class="icon-button" id="refreshButton" aria-label="Reload page" title="Reload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 11a8 8 0 0 0-14.7-4L4 9"/><path d="M4 4v5h5M4 13a8 8 0 0 0 14.7 4L20 15"/><path d="M20 20v-5h-5"/></svg></button>
+        <button class="icon-button" id="homeButton" aria-label="Home" title="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3.5 10 8.5-7 8.5 7"/><path d="M5.5 9v11h13V9M9.5 20v-7h5v7"/></svg></button>
+      </nav>
+      <form class="address-wrap" id="addressForm" role="search">
+        <svg class="address-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        <label class="sr-only" for="address">Address or search</label>
+        <input id="address" type="text" placeholder="Search or enter an address" autocomplete="off" spellcheck="false">
+        <div class="address-actions">
+          <button class="icon-button" id="bookmarkButton" type="button" aria-label="Bookmark this page" title="Bookmark this page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 4.8A1.8 1.8 0 0 1 7.8 3h8.4A1.8 1.8 0 0 1 18 4.8V21l-6-4-6 4V4.8Z"/></svg></button>
+          <button class="go-button" type="submit">Go <span class="sr-only">to address</span></button>
+        </div>
+      </form>
+      <button class="proxy-settings-button" id="openProxySettings" type="button" title="Open proxy settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4m0-12.8L17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="4"/></svg>
+        <span>Proxy Settings</span>
+      </button>
+      <div class="proxy-pill" id="proxyPill" title="No proxy relay configured">
+        <span class="proxy-dot"></span><span class="proxy-label">Direct</span>
+      </div>
+      <button class="logout-button" id="logoutButton" type="button">Sign out</button>
+    </header>
+
+    <section class="workspace" id="workspace">
+      <aside class="sidebar" aria-label="Library and settings">
+        <div class="side-heading">Spaces</div>
+        <div class="side-list">
+          <button class="side-item active" id="homeNav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m3.5 10 8.5-7 8.5 7"/><path d="M5.5 9v11h13V9"/></svg><span class="item-label">Start page</span></button>
+        </div>
+        <div class="side-heading">Bookmarks <button class="icon-button" id="addBookmarkSide" aria-label="Add bookmark" title="Add current page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <div class="side-list" id="bookmarkList"></div>
+        <div class="side-heading">History <button class="icon-button" id="clearHistory" aria-label="Clear history" title="Clear browsing history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></button></div>
+        <div class="side-list" id="historyList"></div>
+        <div class="side-heading">Search engine</div>
+        <div class="side-select-wrap">
+          <label for="searchEngine" class="sr-only">Choose search engine</label>
+          <select id="searchEngine">
+            <option value="https://www.google.com/search?q=">Google</option>
+            <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
+            <option value="https://www.bing.com/search?q=">Bing</option>
+          </select>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m7 10 5 5 5-5"/></svg>
+        </div>
+        <div class="sidebar-bottom">
+          <button class="theme-toggle" id="themeToggle"><svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span id="themeLabel">Switch to light mode</span></button>
+        </div>
+      </aside>
+
+      <section class="browser" aria-label="Browser window">
+        <div class="tab-strip" id="tabStrip" role="tablist" aria-label="Browser tabs">
+          <button class="icon-button new-tab" id="newTab" aria-label="New tab" title="New tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div>
+        <div class="viewport" id="viewport">
+          <div class="progress" id="progress" aria-hidden="true"></div>
+          <div id="tabFrames"></div>
+          <section class="welcome" id="welcome">
+            <div class="welcome-orbit"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="24" cy="24" r="18"/><ellipse cx="24" cy="24" rx="8" ry="18"/><path d="M6 24h36M10.5 13h27M10.5 35h27"/></svg></div>
+            <h1>Find your next orbit.</h1>
+            <p>A little space to explore. Search the web, pick up where you left off, or let curiosity lead.</p>
+            <button class="search-card" id="focusSearch" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg><span>Search anything or type a URL...</span><span class="key-hint">⌘ L</span></button>
+            <div class="shortcuts">
+              <button class="shortcut" data-url="https://www.wikipedia.org"><span class="shortcut-icon">W</span><span>Wikipedia</span></button>
+              <button class="shortcut" data-url="https://www.youtube.com"><span class="shortcut-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2a2.8 2.8 0 0 0-2-2C17.9 4.7 12 4.7 12 4.7s-5.9 0-7.6.5a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.8 2.8 2.8 0 0 0 2 2c1.7.5 7.6.5 7.6.5s5.9 0 7.6-.5a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.8ZM10 15.3V8.7l5.7 3.3-5.7 3.3Z"/></svg></span><span>YouTube</span></button>
+              <button class="shortcut" data-url="https://www.reddit.com"><span class="shortcut-icon">r/</span><span>Reddit</span></button>
+              <button class="shortcut" data-url="https://github.com"><span class="shortcut-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .9a11.1 11.1 0 0 0-3.5 21.6c.6.1.8-.3.8-.6v-2.1c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.6-1.3-1.6-1.1-.8.1-.8.1-.8 1.2.1 1.8 1.3 1.8 1.3 1.1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.4-1.3-5.4-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.8 5.5-5.4 5.8.4.3.7 1 .7 2v3c0 .3.2.7.8.6A11.1 11.1 0 0 0 12 .9Z"/></svg></span><span>GitHub</span></button>
+            </div>
+            <div class="shortcuts" id="newTabBookmarks" aria-label="Bookmarked pages"></div>
+          </section>
+          <section class="error-card" id="errorCard" hidden aria-live="polite">
+            <div class="error-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2.8 19h18.4L12 3Z"/><path d="M12 9v4m0 3h.01"/></svg></div>
+            <h2>This page can't be shown here</h2>
+            <p id="errorMessage">The site may prevent embedding in another page. That's a browser security policy, not a connection failure.</p>
+            <div class="error-actions">
+              <button class="action-button primary" id="openNewTab">Open in new tab</button>
+              <button class="action-button" id="alternativeRoute">Try configured relay</button>
+              <button class="action-button" id="dismissError">Back to start</button>
+            </div>
+          </section>
+        </div>
+        <section class="inspector" aria-label="Network inspector">
+          <div class="inspector-head">
+            <div class="inspector-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 18V6m5 12V9m5 9V4m5 14v-7"/></svg>Network inspector <span class="inspector-tag">PREVIEW</span></div>
+            <div class="inspector-tools"><span id="latency">— ms</span><span>·</span><span id="resourceCount">0 requests</span><button class="icon-button" id="inspectorToggle" aria-label="Collapse inspector" title="Collapse inspector"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 14 6-6 6 6"/></svg></button></div>
+          </div>
+          <div class="inspector-body">
+            <div class="request-info">
+              <div class="request-line"><span class="method">GET</span><span id="requestUrl">Waiting for navigation</span></div>
+              <div class="response-line"><span class="status-code" id="statusCode">—</span><span id="responseText">No request yet</span></div>
+            </div>
+            <div class="header-list" id="headerList">
+              <div class="header-item"><span class="header-key">content-type</span><span class="header-value">—</span></div>
+              <div class="header-item"><span class="header-key">navigation</span><span class="header-value">direct iframe</span></div>
+              <div class="header-item"><span class="header-key">response headers</span><span class="header-value">not readable cross-origin</span></div>
+              <div class="header-item"><span class="header-key">privacy</span><span class="header-value">sandboxed frame</span></div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <div class="tab-context-menu" id="tabContextMenu" role="menu" hidden>
+    <button type="button" data-tab-action="duplicate" role="menuitem">Duplicate tab</button>
+    <button type="button" data-tab-action="reload" role="menuitem">Reload tab</button>
+    <button type="button" class="menu-proxy" data-tab-action="proxy" role="menuitemcheckbox" aria-checked="true">✓ Use configured proxy</button>
+  </div>
+
+  <dialog class="proxy-dialog" id="proxyDialog" aria-labelledby="proxyDialogTitle">
+    <form id="proxyForm">
+      <div class="dialog-heading">
+        <div><h2 id="proxyDialogTitle">Proxy Settings</h2><p>Configure a backend relay. Browser-only pages cannot set native HTTP or SOCKS proxy routes.</p></div>
+        <button class="dialog-close" type="button" id="closeProxySettings" aria-label="Close settings">×</button>
+      </div>
+      <div class="proxy-form-grid">
+        <div class="proxy-field">
+          <label for="proxyType">Proxy type</label>
+          <select id="proxyType"><option>HTTP</option><option>HTTPS</option><option>SOCKS5</option></select>
+        </div>
+        <div class="proxy-field">
+          <label for="proxyPort">Port number</label>
+          <input id="proxyPort" type="number" min="1" max="65535" placeholder="8080">
+        </div>
+        <div class="proxy-field full">
+          <label for="proxyHost">Proxy host / IP address</label>
+          <input id="proxyHost" type="text" autocomplete="off" placeholder="proxy.example.com">
+        </div>
+        <div class="proxy-field">
+          <label for="proxyUsername">Username (optional)</label>
+          <input id="proxyUsername" type="text" autocomplete="off">
+        </div>
+        <div class="proxy-field">
+          <label for="proxyPassword">Password (optional)</label>
+          <input id="proxyPassword" type="password" autocomplete="new-password">
+        </div>
+        <div class="proxy-field full">
+          <label for="proxyBypass">Bypass list · comma or newline separated</label>
+          <textarea id="proxyBypass" placeholder="localhost, 127.0.0.1, .internal.example"></textarea>
+        </div>
+        <div class="proxy-field full">
+          <label for="proxyEndpoint">Trusted relay endpoint base URL</label>
+          <input id="proxyEndpoint" type="url" placeholder="/api/proxy">
+        </div>
+      </div>
+      <label class="proxy-enable-row"><input id="proxyEnabled" type="checkbox"> Enable proxy for all open tabs (override per tab)</label>
+      <div class="proxy-status" id="proxyTestStatus" role="status" aria-live="polite" data-state="idle"><span class="proxy-status-dot"></span><span id="proxyTestText">Not tested. Connection tests require a configured backend.</span></div>
+      <p class="proxy-security-note">Proxy credentials are kept in memory only and sent to your configured backend over HTTPS (or localhost). The backend must enforce an allowlist and block private-network/metadata targets.</p>
+      <div class="dialog-actions">
+        <button class="action-button" type="button" id="testProxy">Test Connection</button>
+        <button class="action-button primary" type="submit">Save settings</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    "use strict";
+
+    // Relay API contract: POST {base}/config with proxy settings, POST {base}/test
+    // for a connectivity check, and GET {base}?url=<encoded-url> for navigation.
+    // The operator's backend must authenticate callers, enforce an explicit
+    // destination allowlist, block private/metadata IPs, revalidate redirects,
+    // and rewrite page subresources. Never expose an unrestricted proxy.
+    const STORAGE = {
+      bookmarks: "orbit.bookmarks.v1",
+      history: "orbit.history.v1",
+      theme: "orbit.theme.v1",
+      engine: "orbit.engine.v1",
+      tabs: "orbit.tabs.v1",
+      activeTab: "orbit.activeTab.v1",
+      proxy: "orbit.proxy.v1"
+    };
+    const $ = (selector) => document.querySelector(selector);
+    const address = $("#address");
+    const welcome = $("#welcome");
+    const errorCard = $("#errorCard");
+    const progress = $("#progress");
+    let tabs = [];
+    let activeTabId = "";
+    let proxyConfig = {
+      type: "HTTP", host: "", port: "", bypass: "localhost, 127.0.0.1, ::1", endpoint: "", enabled: false
+    };
+    let proxyCredentials = { username: "", password: "" };
+    let currentUrl = "";
+    let loadingTimer = 0;
+    let inspectorCollapsed = false;
+    let contextTabId = "";
+
+    function readStorage(key, fallback) {
+      try {
+        const value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function writeStorage(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch {
+        setResponse("Local storage unavailable", "Storage error", "—");
+      }
+    }
+
+    function normalizeInput(raw) {
+      const value = raw.trim();
+      if (!value) return null;
+      if (/^(https?:\/\/|about:)/i.test(value)) {
+        try {
+          const parsed = new URL(value);
+          if (parsed.protocol === "https:" || parsed.protocol === "http:" || parsed.href === "about:blank") return parsed.href;
+        } catch { return null; }
+        return null;
+      }
+      if (/^[\w.-]+\.[a-z]{2,}(?::\d+)?(?:[/?#].*)?$/i.test(value)) {
+        try { return new URL(`https://${value}`).href; } catch { return null; }
+      }
+      const engine = $("#searchEngine").value;
+      return engine + encodeURIComponent(value);
+    }
+
+    function domainOf(url) {
+      try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; }
+    }
+
+    function activeTab() {
+      return tabs.find((tab) => tab.id === activeTabId) || null;
+    }
+
+    function newTabId() {
+      return globalThis.crypto?.randomUUID?.() || `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    function persistTabs() {
+      writeStorage(STORAGE.tabs, tabs.map(({ id, url, title, history, historyIndex, proxyEnabled }) => ({
+        id, url, title, history, historyIndex, proxyEnabled
+      })));
+      writeStorage(STORAGE.activeTab, activeTabId);
+    }
+
+    function renderTabs() {
+      const strip = $("#tabStrip");
+      strip.querySelectorAll(".tab").forEach((tab) => tab.remove());
+      for (const tab of tabs) {
+        const button = document.createElement("button");
+        button.className = `tab${tab.id === activeTabId ? " active" : ""}`;
+        button.type = "button";
+        button.setAttribute("role", "tab");
+        button.setAttribute("aria-selected", String(tab.id === activeTabId));
+        button.title = tab.url || "New tab";
+        const favicon = document.createElement("span");
+        favicon.className = "tab-favicon";
+        favicon.textContent = tab.url ? domainOf(tab.url).charAt(0).toUpperCase() : "✦";
+        const title = document.createElement("span");
+        title.className = "tab-title";
+        title.textContent = tab.title || (tab.url ? domainOf(tab.url) : "New tab");
+        const menu = document.createElement("span");
+        menu.className = "tab-menu-button";
+        menu.setAttribute("role", "button");
+        menu.setAttribute("aria-label", `Tab options for ${title.textContent}`);
+        menu.textContent = "⋯";
+        menu.addEventListener("click", (event) => {
+          event.stopPropagation();
+          showTabMenu(tab.id, event.currentTarget);
+        });
+        const close = document.createElement("span");
+        close.className = "tab-close";
+        close.setAttribute("role", "button");
+        close.setAttribute("aria-label", `Close ${title.textContent}`);
+        close.textContent = "×";
+        close.addEventListener("click", (event) => {
+          event.stopPropagation();
+          closeTab(tab.id);
+        });
+        button.append(favicon, title, menu, close);
+        button.addEventListener("click", () => activateTab(tab.id));
+        button.addEventListener("contextmenu", (event) => {
+          event.preventDefault();
+          showTabMenu(tab.id, button, event.clientX, event.clientY);
+        });
+        strip.insertBefore(button, $("#newTab"));
+      }
+    }
+
+    function createTab({ id = newTabId(), url = "", title = "", history = [], historyIndex = -1, proxyEnabled = proxyConfig.enabled } = {}) {
+      const frame = document.createElement("iframe");
+      frame.className = "frame-layer";
+      frame.title = title || "Web page";
+      frame.setAttribute("sandbox", "allow-scripts allow-forms");
+      frame.hidden = true;
+      const tab = { id, url, title, history, historyIndex, proxyEnabled, frame, failed: false, loadToken: 0 };
+      frame.addEventListener("load", () => {
+        const token = tab.loadToken;
+        if (token !== tab.loadToken || !tab.url) return;
+        tab.failed = false;
+        if (tab.id === activeTabId) {
+          setLoading(false);
+          errorCard.hidden = true;
+          setResponse("200*", "Frame navigated · status not verified", `${Math.max(1, Math.round(performance.now() - tab.startedAt))} ms`);
+        }
+        persistTabs();
+      });
+      tabs.push(tab);
+      $("#tabFrames").append(frame);
+      renderTabs();
+      activateTab(tab.id);
+      if (url) navigate(url, { addToStack: false });
+      else persistTabs();
+      return tab;
+    }
+
+    function activateTab(id) {
+      const tab = tabs.find((item) => item.id === id);
+      if (!tab) return;
+      activeTabId = id;
+      currentUrl = tab.url;
+      address.value = tab.url;
+      for (const item of tabs) item.frame.hidden = item.id !== id || !item.url;
+      welcome.classList.toggle("hidden", Boolean(tab.url));
+      errorCard.hidden = !tab.failed;
+      setLoading(false);
+      renderTabs();
+      updateNavigationButtons();
+      updateBookmarkButton();
+      renderProxyBadge();
+      setResponse(tab.url ? "—" : "—", tab.url ? "Tab ready" : "No request yet", "— ms");
+      persistTabs();
+    }
+
+    function closeTab(id) {
+      const index = tabs.findIndex((tab) => tab.id === id);
+      if (index < 0) return;
+      const wasActive = tabs[index].id === activeTabId;
+      tabs[index].frame.remove();
+      tabs.splice(index, 1);
+      if (!tabs.length) {
+        createTab();
+      } else if (wasActive) {
+        activateTab(tabs[Math.min(index, tabs.length - 1)].id);
+      } else {
+        renderTabs();
+        persistTabs();
+      }
+    }
+
+    function showTabMenu(id, anchor, x, y) {
+      contextTabId = id;
+      const menu = $("#tabContextMenu");
+      const tab = tabs.find((item) => item.id === id);
+      const proxyAction = menu.querySelector('[data-tab-action="proxy"]');
+      proxyAction.textContent = `${tab.proxyEnabled ? "✓" : "　"} Use configured proxy`;
+      proxyAction.setAttribute("aria-checked", String(tab.proxyEnabled));
+      menu.hidden = false;
+      const rect = anchor.getBoundingClientRect();
+      menu.style.left = `${Math.min(x ?? rect.left, innerWidth - 200)}px`;
+      menu.style.top = `${Math.min(y ?? rect.bottom, innerHeight - 130)}px`;
+    }
+
+    function setResponse(code, text, latency) {
+      $("#statusCode").textContent = code;
+      $("#responseText").textContent = text;
+      $("#latency").textContent = latency;
+      $("#resourceCount").textContent = code === "—" ? "0 requests" : "1 request";
+      $("#requestUrl").textContent = currentUrl || "Waiting for navigation";
+      $("#requestUrl").title = currentUrl;
+      $("#headerList").innerHTML = "";
+      const tab = activeTab();
+      const relayActive = Boolean(tab?.proxyEnabled && relayBase() && currentUrl && !hostBypasses(currentUrl));
+      const details = [
+        ["content-type", "unknown (cross-origin)"],
+        ["navigation", currentUrl ? (relayActive ? "backend relay" : "direct iframe") : "idle"],
+        ["response headers", "not readable cross-origin"],
+        ["privacy", "sandboxed frame"]
+      ];
+      for (const [key, value] of details) {
+        const item = document.createElement("div");
+        item.className = "header-item";
+        const k = document.createElement("span");
+        k.className = "header-key";
+        k.textContent = key;
+        const v = document.createElement("span");
+        v.className = "header-value";
+        v.textContent = value;
+        item.append(k, v);
+        $("#headerList").append(item);
+      }
+    }
+
+    function updateNavigationButtons() {
+      const tab = activeTab();
+      $("#backButton").disabled = !tab || tab.historyIndex <= 0;
+      $("#forwardButton").disabled = !tab || tab.historyIndex >= tab.history.length - 1;
+    }
+
+    function renderHistory() {
+      const list = $("#historyList");
+      list.replaceChildren();
+      const entries = readStorage(STORAGE.history, []).slice(0, 6);
+      if (!entries.length) {
+        list.innerHTML = '<p class="empty-note">Pages you visit will show up here.</p>';
+        return;
+      }
+      for (const entry of entries) {
+        const button = document.createElement("button");
+        button.className = "side-item";
+        button.title = entry.url;
+        const icon = document.createElement("span");
+        icon.className = "tab-favicon";
+        icon.textContent = domainOf(entry.url).charAt(0).toUpperCase();
+        const label = document.createElement("span");
+        label.className = "item-label";
+        label.textContent = domainOf(entry.url);
+        const time = document.createElement("span");
+        time.className = "item-time";
+        time.textContent = entry.time;
+        button.append(icon, label, time);
+        button.addEventListener("click", () => navigate(entry.url));
+        list.append(button);
+      }
+    }
+
+    function renderBookmarks() {
+      const list = $("#bookmarkList");
+      list.replaceChildren();
+      const entries = readStorage(STORAGE.bookmarks, []);
+      const quickAccess = $("#newTabBookmarks");
+      quickAccess.replaceChildren();
+      for (const entry of entries.slice(0, 6)) {
+        const shortcut = document.createElement("button");
+        shortcut.className = "shortcut";
+        shortcut.title = entry.url;
+        const icon = document.createElement("span");
+        icon.className = "shortcut-icon";
+        icon.textContent = domainOf(entry.url).charAt(0).toUpperCase();
+        const label = document.createElement("span");
+        label.textContent = entry.title || domainOf(entry.url);
+        shortcut.append(icon, label);
+        shortcut.addEventListener("click", () => navigate(entry.url));
+        quickAccess.append(shortcut);
+      }
+      if (!entries.length) {
+        list.innerHTML = '<p class="empty-note">Save a page to keep it close.</p>';
+        return;
+      }
+      for (const entry of entries) {
+        const button = document.createElement("button");
+        button.className = "side-item";
+        button.title = entry.url;
+        const icon = document.createElement("span");
+        icon.className = "tab-favicon";
+        icon.textContent = domainOf(entry.url).charAt(0).toUpperCase();
+        const label = document.createElement("span");
+        label.className = "item-label";
+        label.textContent = entry.title || domainOf(entry.url);
+        const remove = document.createElement("span");
+        remove.className = "icon-button remove-bookmark";
+        remove.setAttribute("role", "button");
+        remove.setAttribute("aria-label", `Remove ${label.textContent}`);
+        remove.textContent = "×";
+        remove.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const remaining = readStorage(STORAGE.bookmarks, []).filter((item) => item.url !== entry.url);
+          writeStorage(STORAGE.bookmarks, remaining);
+          renderBookmarks();
+          updateBookmarkButton();
+        });
+        button.append(icon, label, remove);
+        button.addEventListener("click", () => navigate(entry.url));
+        list.append(button);
+      }
+    }
+
+    function addHistory(url) {
+      const entries = readStorage(STORAGE.history, []);
+      const item = { url, time: new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date()) };
+      writeStorage(STORAGE.history, [item, ...entries.filter((entry) => entry.url !== url)].slice(0, 30));
+      renderHistory();
+    }
+
+    function updateBookmarkButton() {
+      const saved = readStorage(STORAGE.bookmarks, []).some((item) => item.url === currentUrl);
+      $("#bookmarkButton").style.color = saved ? "var(--accent)" : "";
+      $("#bookmarkButton").setAttribute("aria-label", saved ? "Remove bookmark" : "Bookmark this page");
+    }
+
+    function addBookmark() {
+      if (!currentUrl) {
+        address.focus();
+        return;
+      }
+      const bookmarks = readStorage(STORAGE.bookmarks, []);
+      const existing = bookmarks.findIndex((entry) => entry.url === currentUrl);
+      if (existing >= 0) bookmarks.splice(existing, 1);
+      else bookmarks.unshift({ url: currentUrl, title: domainOf(currentUrl) });
+      writeStorage(STORAGE.bookmarks, bookmarks.slice(0, 50));
+      renderBookmarks();
+      updateBookmarkButton();
+    }
+
+    function formProxySettings() {
+      return {
+        type: $("#proxyType").value,
+        host: $("#proxyHost").value.trim(),
+        port: $("#proxyPort").value,
+        username: $("#proxyUsername").value,
+        password: $("#proxyPassword").value,
+        bypass: $("#proxyBypass").value.trim(),
+        endpoint: $("#proxyEndpoint").value.trim(),
+        enabled: $("#proxyEnabled").checked
+      };
+    }
+
+    function relayBase(raw = proxyConfig.endpoint) {
+      if (!raw) return "";
+      try {
+        const url = new URL(raw, location.href);
+        const local = ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+        if (!["https:", "http:"].includes(url.protocol) || (url.protocol === "http:" && !local) ||
+            url.username || url.password || url.search || url.hash) return "";
+        return url.href.replace(/\/+$/, "");
+      } catch {
+        return "";
+      }
+    }
+
+    function setProxyStatus(message, state = "idle") {
+      $("#proxyTestStatus").dataset.state = state;
+      $("#proxyTestText").textContent = message;
+    }
+
+    function renderProxyBadge() {
+      const tab = activeTab();
+      const active = Boolean(relayBase() && tab?.proxyEnabled && (!currentUrl || !hostBypasses(currentUrl)));
+      $("#proxyPill .proxy-label").textContent = active ? "Relay" : "Direct";
+      $("#proxyPill").title = active
+        ? `Proxy relay enabled · ${proxyConfig.type} ${proxyConfig.host}:${proxyConfig.port}`
+        : "Direct connection · configure a trusted backend relay to proxy requests";
+      $("#proxyPill .proxy-dot").style.background = active ? "var(--green)" : "var(--muted)";
+    }
+
+    function populateProxyForm() {
+      $("#proxyType").value = proxyConfig.type;
+      $("#proxyHost").value = proxyConfig.host;
+      $("#proxyPort").value = proxyConfig.port;
+      $("#proxyBypass").value = proxyConfig.bypass;
+      $("#proxyEndpoint").value = proxyConfig.endpoint;
+      $("#proxyEnabled").checked = proxyConfig.enabled;
+      $("#proxyUsername").value = proxyCredentials.username;
+      $("#proxyPassword").value = proxyCredentials.password;
+    }
+
+    function hostBypasses(url) {
+      let host;
+      try { host = new URL(url).hostname.toLowerCase().replace(/^\[|\]$/g, ""); } catch { return false; }
+      const rules = proxyConfig.bypass.split(/[\s,;]+/).map((rule) => rule.trim().toLowerCase()).filter(Boolean);
+      return rules.some((rule) => {
+        if (rule.startsWith("*.")) rule = rule.slice(1);
+        if (rule.startsWith(".")) return host.endsWith(rule) || host === rule.slice(1);
+        return host === rule || host.endsWith(`.${rule}`);
+      });
+    }
+
+    async function postProxyConfig(config, signal) {
+      const base = relayBase(config.endpoint);
+      if (!base) throw new Error("Enter a valid HTTPS (or localhost) relay endpoint.");
+      const response = await fetch(`${base}/config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        signal,
+        body: JSON.stringify({
+          type: config.type, host: config.host, port: Number(config.port),
+          username: config.username, password: config.password,
+          bypass: config.bypass.split(/[\s,;]+/).filter(Boolean)
+        })
+      });
+      if (!response.ok) throw new Error(`Backend rejected proxy settings (HTTP ${response.status}).`);
+      return response;
+    }
+
+    async function testProxyConnection() {
+      const config = formProxySettings();
+      const base = relayBase(config.endpoint);
+      if (!base) {
+        setProxyStatus("Enter a valid HTTPS (or localhost) relay endpoint with a /test route.", "error");
+        return;
+      }
+      if (!config.host || !/^\d+$/.test(config.port) || Number(config.port) < 1 || Number(config.port) > 65535) {
+        setProxyStatus("Enter a proxy host and a port from 1 to 65535.", "error");
+        return;
+      }
+      const button = $("#testProxy");
+      button.disabled = true;
+      setProxyStatus("Testing connection through your backend…", "busy");
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(`${base}/test`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          signal: controller.signal,
+          body: JSON.stringify({
+            type: config.type, host: config.host, port: Number(config.port),
+            username: config.username, password: config.password,
+            bypass: config.bypass.split(/[\s,;]+/).filter(Boolean),
+            testUrl: "https://api.ipify.org?format=json"
+          })
+        });
+        if (!response.ok) throw new Error(`Proxy test failed (HTTP ${response.status}).`);
+        const result = await response.json();
+        if (!result.connected) throw new Error(result.message || "The proxy did not connect.");
+        setProxyStatus(`Connected${result.ip ? ` · IP: ${result.ip}` : ""}${result.latencyMs ? ` · ${result.latencyMs} ms` : ""}`, "ok");
+      } catch (error) {
+        const message = error.name === "AbortError" ? "Error: Timeout after 8 seconds." : `Error: ${error.message || "Unable to reach the proxy test endpoint."}`;
+        setProxyStatus(message, "error");
+      } finally {
+        clearTimeout(timeout);
+        button.disabled = false;
+      }
+    }
+
+    function setLoading(active) {
+      progress.classList.toggle("active", active);
+      if (loadingTimer) clearTimeout(loadingTimer);
+      if (active) {
+        loadingTimer = setTimeout(() => {
+          progress.classList.remove("active");
+          const tab = activeTab();
+          if (tab) tab.failed = true;
+          errorCard.hidden = !tab;
+          $("#alternativeRoute").disabled = !relayBase();
+        }, 9500);
+      }
+    }
+
+    function navigate(url, { addToStack = true, forceProxy = false } = {}) {
+      let parsed;
+      try { parsed = new URL(url); } catch {
+        address.setCustomValidity("Enter a valid website address or search term.");
+        address.reportValidity();
+        address.setCustomValidity("");
+        return;
+      }
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return;
+      const tab = activeTab();
+      if (!tab) return;
+      currentUrl = parsed.href;
+      tab.url = currentUrl;
+      tab.title = domainOf(currentUrl);
+      tab.failed = false;
+      address.value = currentUrl;
+      welcome.classList.add("hidden");
+      errorCard.hidden = true;
+      tab.frame.hidden = false;
+      tab.frame.title = `Web page: ${tab.title}`;
+      setLoading(true);
+      setResponse("…", "Loading page", "— ms");
+      if (addToStack) {
+        tab.history.splice(tab.historyIndex + 1);
+        tab.history.push(currentUrl);
+        tab.historyIndex = tab.history.length - 1;
+      }
+      addHistory(currentUrl);
+      updateBookmarkButton();
+      updateNavigationButtons();
+      renderProxyBadge();
+      renderTabs();
+      const useRelay = (forceProxy || tab.proxyEnabled) &&
+        !hostBypasses(currentUrl) && Boolean(relayBase());
+      const base = relayBase();
+      const target = useRelay
+        ? `${base}?url=${encodeURIComponent(currentUrl)}`
+        : currentUrl;
+      tab.loadToken += 1;
+      tab.startedAt = performance.now();
+      tab.frame.src = target;
+      persistTabs();
+    }
+
+    function goHome() {
+      const tab = activeTab();
+      if (!tab) return;
+      tab.url = "";
+      tab.title = "";
+      tab.failed = false;
+      tab.frame.hidden = true;
+      currentUrl = "";
+      address.value = "";
+      setLoading(false);
+      welcome.classList.remove("hidden");
+      errorCard.hidden = true;
+      setResponse("—", "No request yet", "— ms");
+      renderTabs();
+      updateBookmarkButton();
+      updateNavigationButtons();
+      renderProxyBadge();
+      persistTabs();
+    }
+
+    function reloadTabsForProxyChange() {
+      const selectedId = activeTabId;
+      for (const tab of [...tabs]) {
+        if (!tab.url) continue;
+        activateTab(tab.id);
+        navigate(tab.url, { addToStack: false });
+      }
+      if (tabs.some((tab) => tab.id === selectedId)) activateTab(selectedId);
+    }
+
+    $("#addressForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const url = normalizeInput(address.value);
+      if (url) navigate(url);
+      else {
+        address.setCustomValidity("Enter a valid URL or search query.");
+        address.reportValidity();
+        address.setCustomValidity("");
+      }
+    });
+    $("#backButton").addEventListener("click", () => {
+      const tab = activeTab();
+      if (tab && tab.historyIndex > 0) navigate(tab.history[--tab.historyIndex], { addToStack: false });
+    });
+    $("#forwardButton").addEventListener("click", () => {
+      const tab = activeTab();
+      if (tab && tab.historyIndex < tab.history.length - 1) navigate(tab.history[++tab.historyIndex], { addToStack: false });
+    });
+    $("#refreshButton").addEventListener("click", () => {
+      if (currentUrl) navigate(currentUrl, { addToStack: false });
+    });
+    $("#homeButton").addEventListener("click", goHome);
+    $("#homeNav").addEventListener("click", goHome);
+    $("#logoutButton").addEventListener("click", async () => {
+      const button = $("#logoutButton");
+      button.disabled = true;
+      try {
+        const response = await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Accept": "application/json" }
+        });
+        if (!response.ok) throw new Error(`Sign out failed (HTTP ${response.status}).`);
+        location.replace("/");
+      } catch (error) {
+        button.disabled = false;
+        console.error(error);
+        window.alert(error.message);
+      }
+    });
+    $("#focusSearch").addEventListener("click", () => address.focus());
+    $("#bookmarkButton").addEventListener("click", addBookmark);
+    $("#addBookmarkSide").addEventListener("click", addBookmark);
+    $("#clearHistory").addEventListener("click", () => {
+      writeStorage(STORAGE.history, []);
+      renderHistory();
+    });
+    $("#sidebarToggle").addEventListener("click", () => $("#workspace").classList.toggle("sidebar-collapsed"));
+    $("#newTab").addEventListener("click", () => createTab());
+    $("#dismissError").addEventListener("click", goHome);
+    $("#openNewTab").addEventListener("click", () => {
+      if (currentUrl) window.open(currentUrl, "_blank", "noopener,noreferrer");
+    });
+    $("#alternativeRoute").addEventListener("click", () => {
+      if (relayBase() && currentUrl) navigate(currentUrl, { addToStack: false, forceProxy: true });
+    });
+    $("#openProxySettings").addEventListener("click", () => {
+      populateProxyForm();
+      $("#proxyDialog").showModal();
+    });
+    $("#closeProxySettings").addEventListener("click", () => $("#proxyDialog").close());
+    $("#proxyDialog").addEventListener("click", (event) => {
+      if (event.target === $("#proxyDialog")) $("#proxyDialog").close();
+    });
+    $("#testProxy").addEventListener("click", testProxyConnection);
+    $("#proxyForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const config = formProxySettings();
+      if (config.enabled && (!config.host || !/^\d+$/.test(config.port) || Number(config.port) < 1 || Number(config.port) > 65535)) {
+        setProxyStatus("Enter a proxy host and a port from 1 to 65535.", "error");
+        return;
+      }
+      if (config.endpoint && !relayBase(config.endpoint)) {
+        setProxyStatus("Use an HTTPS relay URL (HTTP is allowed only on localhost).", "error");
+        return;
+      }
+      const previousConfig = { ...proxyConfig };
+      const previousCredentials = { ...proxyCredentials };
+      const previousTabProxyStates = new Map(tabs.map((tab) => [tab.id, tab.proxyEnabled]));
+      proxyConfig = {
+        type: config.type, host: config.host, port: config.port,
+        bypass: config.bypass, endpoint: config.endpoint, enabled: config.enabled
+      };
+      proxyCredentials = { username: config.username, password: config.password };
+      for (const tab of tabs) tab.proxyEnabled = config.enabled;
+      writeStorage(STORAGE.proxy, proxyConfig);
+      renderProxyBadge();
+      persistTabs();
+      if (!config.enabled) {
+        setProxyStatus("Proxy disabled. Tabs will connect directly.", "idle");
+        reloadTabsForProxyChange();
+        $("#proxyDialog").close();
+        return;
+      }
+      if (!relayBase()) {
+        setProxyStatus("Settings saved locally, but no relay endpoint is set; traffic remains direct.", "error");
+        reloadTabsForProxyChange();
+        renderTabs();
+        return;
+      }
+      const button = $("#proxyForm").querySelector('[type="submit"]');
+      button.disabled = true;
+      setProxyStatus("Saving configuration to your backend…", "busy");
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      try {
+        await postProxyConfig(config, controller.signal);
+        setProxyStatus("Proxy settings saved to backend.", "ok");
+        reloadTabsForProxyChange();
+        $("#proxyDialog").close();
+      } catch (error) {
+        proxyConfig = previousConfig;
+        proxyCredentials = previousCredentials;
+        for (const tab of tabs) tab.proxyEnabled = previousTabProxyStates.get(tab.id) ?? false;
+        writeStorage(STORAGE.proxy, proxyConfig);
+        persistTabs();
+        renderProxyBadge();
+        setProxyStatus(error.name === "AbortError" ? "Error: backend timed out." : `Error: ${error.message}`, "error");
+      } finally {
+        clearTimeout(timeout);
+        button.disabled = false;
+        renderTabs();
+      }
+    });
+    $("#tabContextMenu").addEventListener("click", (event) => {
+      const action = event.target.closest("[data-tab-action]")?.dataset.tabAction;
+      const tab = tabs.find((item) => item.id === contextTabId);
+      $("#tabContextMenu").hidden = true;
+      if (!tab || !action) return;
+      if (action === "duplicate") {
+        createTab({
+          url: tab.url,
+          title: tab.title,
+          history: [...tab.history],
+          historyIndex: tab.historyIndex,
+          proxyEnabled: tab.proxyEnabled
+        });
+      } else if (action === "reload" && tab.url) {
+        activateTab(tab.id);
+        navigate(tab.url, { addToStack: false });
+      } else if (action === "proxy") {
+        tab.proxyEnabled = !tab.proxyEnabled;
+        if (tab.id === activeTabId && tab.url) navigate(tab.url, { addToStack: false });
+        else persistTabs();
+        renderTabs();
+      }
+    });
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("#tabContextMenu")) $("#tabContextMenu").hidden = true;
+    });
+    $("#themeToggle").addEventListener("click", () => {
+      const root = document.documentElement;
+      const next = root.dataset.theme === "light" ? "dark" : "light";
+      root.dataset.theme = next;
+      writeStorage(STORAGE.theme, next);
+      $("#themeLabel").textContent = next === "dark" ? "Switch to light mode" : "Switch to dark mode";
+    });
+    $("#searchEngine").addEventListener("change", (event) => writeStorage(STORAGE.engine, event.target.value));
+    document.querySelectorAll(".shortcut").forEach((button) => {
+      button.addEventListener("click", () => navigate(button.dataset.url));
+    });
+    $("#inspectorToggle").addEventListener("click", () => {
+      inspectorCollapsed = !inspectorCollapsed;
+      $(".browser").style.gridTemplateRows = inspectorCollapsed
+        ? "38px minmax(0,1fr) 35px"
+        : "";
+      $(".inspector-body").hidden = inspectorCollapsed;
+      $("#inspectorToggle").setAttribute("aria-label", inspectorCollapsed ? "Expand inspector" : "Collapse inspector");
+    });
+    document.addEventListener("keydown", (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "l") {
+        event.preventDefault();
+        address.focus();
+        address.select();
+      }
+      if (event.key === "Escape" && document.activeElement === address) address.blur();
+    });
+
+    const savedTheme = readStorage(STORAGE.theme, "dark");
+    document.documentElement.dataset.theme = savedTheme === "light" ? "light" : "dark";
+    $("#themeLabel").textContent = document.documentElement.dataset.theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+    $("#searchEngine").value = readStorage(STORAGE.engine, "https://www.google.com/search?q=");
+    const storedProxy = readStorage(STORAGE.proxy, null);
+    if (storedProxy && typeof storedProxy === "object") {
+      proxyConfig = {
+        type: ["HTTP", "HTTPS", "SOCKS5"].includes(storedProxy.type) ? storedProxy.type : proxyConfig.type,
+        host: typeof storedProxy.host === "string" ? storedProxy.host : "",
+        port: storedProxy.port == null ? "" : String(storedProxy.port),
+        bypass: typeof storedProxy.bypass === "string" ? storedProxy.bypass : proxyConfig.bypass,
+        endpoint: typeof storedProxy.endpoint === "string" ? storedProxy.endpoint : "",
+        enabled: storedProxy.enabled === true
+      };
+    }
+    populateProxyForm();
+    renderProxyBadge();
+    renderBookmarks();
+    renderHistory();
+    const savedTabs = readStorage(STORAGE.tabs, []);
+    const restoredTabs = Array.isArray(savedTabs) ? savedTabs.slice(0, 20).filter((tab) =>
+      tab && typeof tab === "object" &&
+      (!tab.url || /^https?:\/\//i.test(tab.url))
+    ) : [];
+    if (restoredTabs.length) {
+      for (const item of restoredTabs) {
+        const history = Array.isArray(item.history) ? item.history.filter((url) => /^https?:\/\//i.test(url)) : [];
+        const tab = createTab({
+          id: typeof item.id === "string" ? item.id : newTabId(),
+          title: typeof item.title === "string" ? item.title : "",
+          history,
+          historyIndex: history.length
+            ? Math.max(-1, Math.min(Number.isInteger(item.historyIndex) ? item.historyIndex : -1, history.length - 1))
+            : -1,
+          proxyEnabled: item.proxyEnabled !== false
+        });
+        tab.url = typeof item.url === "string" ? item.url : "";
+        tab.title = tab.title || (tab.url ? domainOf(tab.url) : "");
+      }
+      const lastActive = readStorage(STORAGE.activeTab, "");
+      const selected = tabs.find((tab) => tab.id === lastActive) || tabs[0];
+      activeTabId = "";
+      activateTab(selected.id);
+      for (const tab of tabs) if (tab.url) {
+        activateTab(tab.id);
+        navigate(tab.url, { addToStack: false });
+      }
+      activateTab(selected.id);
+    } else {
+      createTab();
+    }
+    setResponse("—", "No request yet", "— ms");
+  </script>
+</body>
+</html>
