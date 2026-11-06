@@ -251,6 +251,7 @@
 
     const V86_CDN = "https://copy.sh/v86";
     const UBUNTU_ISO_SIZE = 1664614400;
+    const UBUNTU_ISO_URL = "https://calcunitone.s3.us-east-1.amazonaws.com/ubuntu.iso";
     const V86_NETWORK_RELAY_URL = "";
     const PREFERENCES_KEY = "ubuntu-v86-machine-settings";
     const STATE_DB_NAME = "ubuntu-v86-machine";
@@ -467,7 +468,7 @@
     }
 
     function getUbuntuIsoUrl() {
-      return new URL("./ubuntu.iso", window.location.href).href;
+      return UBUNTU_ISO_URL;
     }
 
     async function startUbuntu() {
