@@ -448,16 +448,16 @@
     }
 
     function loadV86() {
-      if (globalThis.V86Starter) return Promise.resolve();
+      if (globalThis.V86) return Promise.resolve();
       if (v86LoadPromise) return v86LoadPromise;
 
       v86LoadPromise = new Promise((resolve, reject) => {
         const script = document.createElement("script");
         script.src = `${V86_CDN}/build/libv86.js`;
-        script.onload = () => globalThis.V86Starter
+        script.onload = () => globalThis.V86
           ? resolve()
-          : reject(new Error("The v86 script loaded without its emulator API."));
-        script.onerror = () => reject(new Error("Could not load v86 from its CDN."));
+          : reject(new Error("The v86 CDN script loaded, but did not expose the expected V86 API."));
+        script.onerror = () => reject(new Error(`The browser could not load ${script.src}. Check the browser's internet access, content blockers, and your site's Content-Security-Policy script-src rules.`));
         document.head.append(script);
       }).catch((error) => {
         v86LoadPromise = null;
@@ -536,7 +536,7 @@
 
         // This is the v86 integration point: RAM, saved state, and optional relay settings
         // from getEmulatorConfig() are mapped to the options accepted by V86Starter.
-        emulator = new V86Starter(emulatorOptions);
+        emulator = new V86(emulatorOptions);
         activeConfig = config;
 
         emulator.add_listener("emulator-ready", () => {
